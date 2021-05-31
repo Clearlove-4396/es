@@ -25,6 +25,7 @@ import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.GetIndexResponse;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -67,10 +68,13 @@ public class ESClient {
 //        esClient.update(indexName, id);
 //        esClient.search(indexName);
 
+//        esClient.bulk("delete", "user");
 //        esClient.bulk("add", "user");
 //        esClient.search("user");
 
-        esClient.query();
+//        esClient.query();
+
+        esClient.boolQuery();
 
         esClient.close();
     }
@@ -174,15 +178,16 @@ public class ESClient {
 
         BulkRequest bulkRequest = new BulkRequest();
         if(option.equals("add")){
-            bulkRequest.add(new IndexRequest().index(indexName).id("1001").source(XContentType.JSON, "name", "wang1", "age", 10));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1002").source(XContentType.JSON, "name","wang10", "age", 20));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1003").source(XContentType.JSON, "name","wang11", "age", 30));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1004").source(XContentType.JSON, "name","wang100", "age", 40));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1005").source(XContentType.JSON, "name","wang101", "age", 50));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1006").source(XContentType.JSON, "name","wang110", "age", 60));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1007").source(XContentType.JSON, "name","wang111", "age", 70));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1001").source(XContentType.JSON, "name", "wang 1", "age", 10));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1002").source(XContentType.JSON, "name","wang 10", "age", 20));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1003").source(XContentType.JSON, "name","wang 11", "age", 30));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1004").source(XContentType.JSON, "name","wang 100", "age", 40));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1005").source(XContentType.JSON, "name","wang 101", "age", 50));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1006").source(XContentType.JSON, "name","wang 110", "age", 60));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1007").source(XContentType.JSON, "name","wang 111", "age", 70));
             bulkRequest.add(new IndexRequest().index(indexName).id("1008").source(XContentType.JSON, "name","yang", "age", 80));
             bulkRequest.add(new IndexRequest().index(indexName).id("1009").source(XContentType.JSON, "name","tony", "age", 90));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1010").source(XContentType.JSON, "name","I think so", "age", 90));
 
         }else if(option.equals("delete")){
             bulkRequest.add(new DeleteRequest().index(indexName).id("1001"));
@@ -220,6 +225,30 @@ public class ESClient {
 
         System.out.println(searchResponse.getHits().getTotalHits());
         for (SearchHit hit : searchResponse.getHits().getHits()) {
+            System.out.println(hit.getSourceAsString());
+        }
+    }
+
+    //  组合查询
+    public void boolQuery() throws IOException {
+
+        SearchRequest searchRequest = new SearchRequest("user");
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+
+        //查询条件
+        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+        boolQueryBuilder.must(QueryBuilders.matchPhraseQuery("name", "think so"));
+
+//        BoolQueryBuilder queryBuilder2 = QueryBuilders.boolQuery();
+//        queryBuilder2.should(QueryBuilders.termQuery("age", "20"));
+//        queryBuilder2.should(QueryBuilders.termQuery("age", "30"));
+//        boolQueryBuilder.must(queryBuilder2);
+
+        searchSourceBuilder.query(boolQueryBuilder);
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
+
+        for (SearchHit hit : searchResponse.getHits().getHits()){
             System.out.println(hit.getSourceAsString());
         }
     }
