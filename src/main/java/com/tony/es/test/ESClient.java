@@ -25,6 +25,7 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.GetIndexResponse;
+import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.cluster.metadata.MappingMetadata;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -77,11 +78,16 @@ public class ESClient {
 
 //        esClient.bulk("delete", "user");
 //        esClient.bulk("add", "user");
-//        esClient.search("user");
+//        esClient.search(indexName);
 
+//        //条件查询
 //        esClient.query();
 
-        esClient.boolQuery();
+//        //组合查询
+//        esClient.boolQuery();
+
+        //模糊查询
+        esClient.fuzzyQuery();
 
         esClient.close();
     }
@@ -117,10 +123,9 @@ public class ESClient {
     //  查询索引
     public void get(String indexName) throws IOException {
         GetIndexResponse getIndexResponse = esClient.indices().get(new GetIndexRequest(indexName), RequestOptions.DEFAULT);
-//        System.out.println(getIndexResponse.getAliases());
-        Map<String, MappingMetadata> mappings = getIndexResponse.getMappings();
-        System.out.println(mappings);
-//        System.out.println(getIndexResponse.getSettings());
+        System.out.println(getIndexResponse.getAliases());
+        System.out.println(getIndexResponse.getMappings());
+        System.out.println(getIndexResponse.getSettings());
     }
 
     //  删除索引
@@ -170,8 +175,8 @@ public class ESClient {
             searchRequest.source(new SearchSourceBuilder().size(20));
             SearchResponse response = esClient.search(searchRequest, RequestOptions.DEFAULT);
             SearchHits hits = response.getHits();
-
-            for (SearchHit searchHit: hits.getHits()) {
+            System.out.println(hits.getTotalHits());
+            for (SearchHit searchHit : hits.getHits()) {
                 System.out.println(searchHit.getSourceAsString());
             }
         }
@@ -278,6 +283,22 @@ public class ESClient {
         SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
 
         for (SearchHit hit : searchResponse.getHits().getHits()){
+            System.out.println(hit.getSourceAsString());
+        }
+    }
+
+    //  模糊查询
+    public void fuzzyQuery() throws IOException {
+
+        SearchRequest searchRequest = new SearchRequest("user");
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.fuzzyQuery("name", "wang").fuzziness(Fuzziness.TWO));
+
+        searchRequest.source(searchSourceBuilder);
+        SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
+
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
             System.out.println(hit.getSourceAsString());
         }
     }
