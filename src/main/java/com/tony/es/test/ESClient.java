@@ -2,6 +2,7 @@ package com.tony.es.test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpHost;
+import org.apache.logging.log4j.core.util.IOUtils;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.bulk.BulkRequest;
 import org.elasticsearch.action.bulk.BulkResponse;
@@ -24,6 +25,11 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.GetIndexResponse;
+import org.elasticsearch.cluster.metadata.MappingMetadata;
+import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.bytes.BytesReference;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -32,6 +38,7 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
+import java.util.Map;
 
 
 /**
@@ -87,7 +94,22 @@ public class ESClient {
 
     //  创建索引
     public void create(String indexName) throws IOException {
-        CreateIndexResponse createIndexResponse = esClient.indices().create(new CreateIndexRequest(indexName), RequestOptions.DEFAULT);
+        XContentBuilder source = XContentFactory.jsonBuilder()
+                .startObject()
+
+                .startObject("properties")
+                .startObject("name").field("type", "text").field("analyzer", "ik_smart").field("search_analyzer", "ik_smart").endObject()
+                .startObject("age").field("type", "keyword").endObject()
+
+                .endObject()
+                .endObject();
+
+        String s = Strings.toString(source);
+        System.out.println(s);
+
+        CreateIndexResponse createIndexResponse = esClient.indices().create(new CreateIndexRequest(indexName).mapping(
+                source
+        ), RequestOptions.DEFAULT);
         if (createIndexResponse.isAcknowledged())
             System.out.printf("创建索引%s成功%n", indexName);
     }
@@ -95,9 +117,10 @@ public class ESClient {
     //  查询索引
     public void get(String indexName) throws IOException {
         GetIndexResponse getIndexResponse = esClient.indices().get(new GetIndexRequest(indexName), RequestOptions.DEFAULT);
-        System.out.println(getIndexResponse.getAliases());
-        System.out.println(getIndexResponse.getMappings());
-        System.out.println(getIndexResponse.getSettings());
+//        System.out.println(getIndexResponse.getAliases());
+        Map<String, MappingMetadata> mappings = getIndexResponse.getMappings();
+        System.out.println(mappings);
+//        System.out.println(getIndexResponse.getSettings());
     }
 
     //  删除索引
@@ -142,7 +165,10 @@ public class ESClient {
             GetResponse getResponse = esClient.get(getRequest, RequestOptions.DEFAULT);
             System.out.println(getResponse.getSourceAsString());
         } else {
-            SearchResponse response = esClient.search(new SearchRequest("user"), RequestOptions.DEFAULT);
+            SearchRequest searchRequest = new SearchRequest("user");
+            //最多输出20条
+            searchRequest.source(new SearchSourceBuilder().size(20));
+            SearchResponse response = esClient.search(searchRequest, RequestOptions.DEFAULT);
             SearchHits hits = response.getHits();
 
             for (SearchHit searchHit: hits.getHits()) {
@@ -188,6 +214,7 @@ public class ESClient {
             bulkRequest.add(new IndexRequest().index(indexName).id("1008").source(XContentType.JSON, "name","yang", "age", 80));
             bulkRequest.add(new IndexRequest().index(indexName).id("1009").source(XContentType.JSON, "name","tony", "age", 90));
             bulkRequest.add(new IndexRequest().index(indexName).id("1010").source(XContentType.JSON, "name","I think so", "age", 90));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1011").source(XContentType.JSON, "name","北京奥运", "age", 90));
 
         }else if(option.equals("delete")){
             bulkRequest.add(new DeleteRequest().index(indexName).id("1001"));
@@ -199,6 +226,8 @@ public class ESClient {
             bulkRequest.add(new DeleteRequest().index(indexName).id("1007"));
             bulkRequest.add(new DeleteRequest().index(indexName).id("1008"));
             bulkRequest.add(new DeleteRequest().index(indexName).id("1009"));
+            bulkRequest.add(new DeleteRequest().index(indexName).id("1010"));
+            bulkRequest.add(new DeleteRequest().index(indexName).id("1011"));
         }else{
             System.out.println("Please enter option from [add | delete]");
             return;
@@ -237,7 +266,7 @@ public class ESClient {
 
         //查询条件
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.must(QueryBuilders.matchPhraseQuery("name", "think so"));
+        boolQueryBuilder.must(QueryBuilders.termQuery("name", "北京奥运"));
 
 //        BoolQueryBuilder queryBuilder2 = QueryBuilders.boolQuery();
 //        queryBuilder2.should(QueryBuilders.termQuery("age", "20"));
