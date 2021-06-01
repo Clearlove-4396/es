@@ -24,6 +24,7 @@ import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
 import org.elasticsearch.client.indices.GetIndexResponse;
+import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -46,7 +47,7 @@ public class ESClient {
     public static void main(String[] args) throws Exception {
 
         //  创建ES客户端
-        String hostname = "localhost";
+        String hostname = "127.0.0.1";
         int port = 9200;
         String scheme = "http";
         ESClient esClient = new ESClient(hostname, port, scheme);
@@ -56,7 +57,7 @@ public class ESClient {
 
 //        esClient.drop(indexName);
 //        esClient.create(indexName);
-
+//
 //        esClient.get(indexName);
 
 //        esClient.delete(indexName, id);
@@ -64,17 +65,21 @@ public class ESClient {
 //        user.setName("alex");
 //        user.setSex("M");
 //        esClient.insert(indexName, id, user);
-
+//
 //        esClient.update(indexName, id);
 //        esClient.search(indexName);
-
-//        esClient.bulk("delete", "user");
+//
 //        esClient.bulk("add", "user");
-//        esClient.search("user");
+//        esClient.search(indexName);
 
+//        //条件查询
 //        esClient.query();
 
-        esClient.boolQuery();
+//        //组合查询
+//        esClient.boolQuery();
+
+        //模糊查询
+        esClient.fuzzyQuery();
 
         esClient.close();
     }
@@ -116,9 +121,8 @@ public class ESClient {
         indexRequest.index(indexName).id(id);
 
         ObjectMapper objectMapper = new ObjectMapper();
-        //将文档转换为JSON格式上传
-        String objJson = objectMapper.writeValueAsString(object);
-        indexRequest.source(objJson, XContentType.JSON);
+        String userJson = objectMapper.writeValueAsString(object);
+        indexRequest.source(userJson, XContentType.JSON);
         IndexResponse indexResponse = esClient.index(indexRequest, RequestOptions.DEFAULT);
         System.out.println(indexResponse.getResult());
     }
@@ -144,8 +148,8 @@ public class ESClient {
         } else {
             SearchResponse response = esClient.search(new SearchRequest("user"), RequestOptions.DEFAULT);
             SearchHits hits = response.getHits();
-
-            for (SearchHit searchHit: hits.getHits()) {
+            System.out.println(hits.getTotalHits());
+            for (SearchHit searchHit : hits.getHits()) {
                 System.out.println(searchHit.getSourceAsString());
             }
         }
@@ -169,27 +173,26 @@ public class ESClient {
         updateRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
         updateRequest.doc(XContentType.JSON, "sex", "T");
         UpdateResponse updateResponse = esClient.update(updateRequest, RequestOptions.DEFAULT);
-
-        System.out.println(updateResponse.getResult());
     }
 
     //  批量增加、删除
     public void bulk(String option, String indexName) throws IOException {
 
         BulkRequest bulkRequest = new BulkRequest();
-        if(option.equals("add")){
-            bulkRequest.add(new IndexRequest().index(indexName).id("1001").source(XContentType.JSON, "name", "wang 1", "age", 10));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1002").source(XContentType.JSON, "name","wang 10", "age", 20));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1003").source(XContentType.JSON, "name","wang 11", "age", 30));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1004").source(XContentType.JSON, "name","wang 100", "age", 40));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1005").source(XContentType.JSON, "name","wang 101", "age", 50));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1006").source(XContentType.JSON, "name","wang 110", "age", 60));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1007").source(XContentType.JSON, "name","wang 111", "age", 70));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1008").source(XContentType.JSON, "name","yang", "age", 80));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1009").source(XContentType.JSON, "name","tony", "age", 90));
-            bulkRequest.add(new IndexRequest().index(indexName).id("1010").source(XContentType.JSON, "name","I think so", "age", 90));
-
-        }else if(option.equals("delete")){
+        if (option.equals("add")) {
+            System.out.println("正在批量添加...");
+            bulkRequest.add(new IndexRequest().index(indexName).id("1001").source(XContentType.JSON, "name", "wang", "age", 16));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1002").source(XContentType.JSON, "name", "wang1", "age", 18));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1003").source(XContentType.JSON, "name", "wang10", "age", 28));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1004").source(XContentType.JSON, "name", "wang11", "age", 22));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1005").source(XContentType.JSON, "name", "wang100", "age", 20));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1006").source(XContentType.JSON, "name", "wang101", "age", 40));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1007").source(XContentType.JSON, "name", "wang110", "age", 34));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1008").source(XContentType.JSON, "name", "wang111", "age", 60));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1009").source(XContentType.JSON, "name", "yang", "age", 80));
+            bulkRequest.add(new IndexRequest().index(indexName).id("1010").source(XContentType.JSON, "name", "tony", "age", 90));
+        } else {
+            System.out.println("正在批量删除...");
             bulkRequest.add(new DeleteRequest().index(indexName).id("1001"));
             bulkRequest.add(new DeleteRequest().index(indexName).id("1002"));
             bulkRequest.add(new DeleteRequest().index(indexName).id("1003"));
@@ -199,9 +202,7 @@ public class ESClient {
             bulkRequest.add(new DeleteRequest().index(indexName).id("1007"));
             bulkRequest.add(new DeleteRequest().index(indexName).id("1008"));
             bulkRequest.add(new DeleteRequest().index(indexName).id("1009"));
-        }else{
-            System.out.println("Please enter option from [add | delete]");
-            return;
+            bulkRequest.add(new DeleteRequest().index(indexName).id("1010"));
         }
         bulkRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.WAIT_UNTIL);
         BulkResponse bulk = esClient.bulk(bulkRequest, RequestOptions.DEFAULT);
@@ -210,22 +211,29 @@ public class ESClient {
 
     //  条件查询
     public void query() throws IOException {
+        SearchRequest searchRequest = new SearchRequest();
+        searchRequest.indices("user");
 
-        SearchRequest searchRequest = new SearchRequest("user");
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-        //term指定查询条件,要注意和match的区别
         searchSourceBuilder.query(QueryBuilders.termQuery("name", "tony"));
 
-        //过滤查询字段
-        String[] includes = {"age"};
-        String[] excludes = {};
-        searchSourceBuilder.fetchSource(includes, excludes);
+//        //过滤查询字段
+//        String includes[] = {"age"};
+//        String excludes[] = {};
+//        searchSourceBuilder.fetchSource(includes, excludes);
+//
+//        //设置分页查询
+//        searchSourceBuilder.from();
+//        searchSourceBuilder.size();
+
         searchRequest.source(searchSourceBuilder);
         SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
 
-        System.out.println(searchResponse.getHits().getTotalHits());
-        for (SearchHit hit : searchResponse.getHits().getHits()) {
-            System.out.println(hit.getSourceAsString());
+        System.out.println(searchResponse.getTook());
+        SearchHits hits = searchResponse.getHits();
+        System.out.println(hits.getTotalHits());
+        for (SearchHit searchHit : hits.getHits()) {
+            System.out.println(searchHit.getSourceAsString());
         }
     }
 
@@ -233,22 +241,38 @@ public class ESClient {
     public void boolQuery() throws IOException {
 
         SearchRequest searchRequest = new SearchRequest("user");
+
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
 
-        //查询条件
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.must(QueryBuilders.matchPhraseQuery("name", "think so"));
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+//        boolQuery.must(QueryBuilders.termQuery("name", "tony"));
+//        boolQuery.should(QueryBuilders.termQuery("age", "100"));
 
-//        BoolQueryBuilder queryBuilder2 = QueryBuilders.boolQuery();
-//        queryBuilder2.should(QueryBuilders.termQuery("age", "20"));
-//        queryBuilder2.should(QueryBuilders.termQuery("age", "30"));
-//        boolQueryBuilder.must(queryBuilder2);
+        //范围查询 年龄大于等于60小于等于80
+        boolQuery.must(QueryBuilders.rangeQuery("age").gte(60).lte(80));
+        searchSourceBuilder.query(boolQuery);
 
-        searchSourceBuilder.query(boolQueryBuilder);
+        searchRequest.source(searchSourceBuilder);
+
+        SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
+        System.out.println(searchResponse.getHits().getTotalHits());
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
+            System.out.println(hit.getSourceAsString());
+        }
+    }
+
+    //  模糊查询
+    public void fuzzyQuery() throws IOException {
+
+        SearchRequest searchRequest = new SearchRequest("user");
+
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
+        searchSourceBuilder.query(QueryBuilders.fuzzyQuery("name", "wang").fuzziness(Fuzziness.TWO));
+
         searchRequest.source(searchSourceBuilder);
         SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
 
-        for (SearchHit hit : searchResponse.getHits().getHits()){
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
             System.out.println(hit.getSourceAsString());
         }
     }
