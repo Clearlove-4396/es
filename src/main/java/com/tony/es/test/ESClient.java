@@ -39,7 +39,6 @@ import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 /**
@@ -84,10 +83,10 @@ public class ESClient {
 //        esClient.query();
 
 //        //组合查询
-//        esClient.boolQuery();
+        esClient.boolQuery();
 
         //模糊查询
-        esClient.fuzzyQuery();
+//        esClient.fuzzyQuery();
 
         esClient.close();
     }
