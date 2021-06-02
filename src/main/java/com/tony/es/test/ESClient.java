@@ -99,6 +99,7 @@ public class ESClient {
 
     //  创建索引
     public void create(String indexName) throws IOException {
+
         XContentBuilder source = XContentFactory.jsonBuilder()
                 .startObject()
 
@@ -249,16 +250,23 @@ public class ESClient {
         //term指定查询条件,要注意和match的区别
         searchSourceBuilder.query(QueryBuilders.termQuery("name", "tony"));
 
-        //过滤查询字段
-        String[] includes = {"age"};
-        String[] excludes = {};
-        searchSourceBuilder.fetchSource(includes, excludes);
+//        //过滤查询字段
+//        String includes[] = {"age"};
+//        String excludes[] = {};
+//        searchSourceBuilder.fetchSource(includes, excludes);
+//
+//        //设置分页查询
+//        searchSourceBuilder.from();
+//        searchSourceBuilder.size();
+
         searchRequest.source(searchSourceBuilder);
         SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
 
-        System.out.println(searchResponse.getHits().getTotalHits());
-        for (SearchHit hit : searchResponse.getHits().getHits()) {
-            System.out.println(hit.getSourceAsString());
+        System.out.println(searchResponse.getTook());
+        SearchHits hits = searchResponse.getHits();
+        System.out.println(hits.getTotalHits());
+        for (SearchHit searchHit : hits.getHits()) {
+            System.out.println(searchHit.getSourceAsString());
         }
     }
 
@@ -277,11 +285,16 @@ public class ESClient {
 //        queryBuilder2.should(QueryBuilders.termQuery("age", "30"));
 //        boolQueryBuilder.must(queryBuilder2);
 
+        //范围查询 年龄大于等于60小于等于80
+//        boolQuery.must(QueryBuilders.rangeQuery("age").gte(60).lte(80));
+//        searchSourceBuilder.query(boolQuery);
+
         searchSourceBuilder.query(boolQueryBuilder);
         searchRequest.source(searchSourceBuilder);
-        SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
 
-        for (SearchHit hit : searchResponse.getHits().getHits()){
+        SearchResponse searchResponse = esClient.search(searchRequest, RequestOptions.DEFAULT);
+        System.out.println(searchResponse.getHits().getTotalHits());
+        for (SearchHit hit : searchResponse.getHits().getHits()) {
             System.out.println(hit.getSourceAsString());
         }
     }
