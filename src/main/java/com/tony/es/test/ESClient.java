@@ -278,7 +278,7 @@ public class ESClient {
 
         //查询条件
         BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        boolQueryBuilder.must(QueryBuilders.termQuery("name", "北京奥运"));
+//        boolQueryBuilder.must(QueryBuilders.termQuery("name", "北京奥运"));
 
 //        BoolQueryBuilder queryBuilder2 = QueryBuilders.boolQuery();
 //        queryBuilder2.should(QueryBuilders.termQuery("age", "20"));
@@ -286,8 +286,7 @@ public class ESClient {
 //        boolQueryBuilder.must(queryBuilder2);
 
         //范围查询 年龄大于等于60小于等于80
-//        boolQuery.must(QueryBuilders.rangeQuery("age").gte(60).lte(80));
-//        searchSourceBuilder.query(boolQuery);
+        boolQueryBuilder.must(QueryBuilders.rangeQuery("age").gte(60).lte(80));
 
         searchSourceBuilder.query(boolQueryBuilder);
         searchRequest.source(searchSourceBuilder);
